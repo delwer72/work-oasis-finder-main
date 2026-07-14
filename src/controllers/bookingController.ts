@@ -28,29 +28,29 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
 // @route   GET /api/bookings/my-bookings
 export const getMyBookings = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // ইউজারের আইডি দিয়ে বুকিং খোঁজা এবং সাথে স্পেসের কিছু তথ্য (populate) নিয়ে আসা
-    const bookings = await Booking.find({ user: req.user?._id }).populate("workspace", "name address price image");
+    // ইউজারের আইডি দিয়ে বুকিং খোঁজা এবং সাথে স্পেসের কিছু তথ্য (populate) নিয়ে আসা
+    const bookings = await Booking.find({ user: req.user?._id }).populate("workspace", "name address price image title");
     res.json(bookings);
   } catch (error) {
     res.status(500).json({ message: "Server error", error: (error as Error).message });
   }
 };
 
-// @desc    অ্যাডমিন হিসেবে ওয়েবসাইটের সমস্ত বুকিং দেখা
+// @desc    অ্যাডমিন হিসেবে ওয়েবসাইটের সমস্ত বুকিং দেখা
 // @route   GET /api/bookings/all
 export const getAllBookings = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // এখানে আমরা user এবং workspace উভয়েরই কিছু তথ্য populate করে নিয়ে আসছি
+    // এখানে আমরা user এবং workspace উভয়েরই কিছু তথ্য populate করে নিয়ে আসছি
     const bookings = await Booking.find({})
       .populate("user", "name email")
-      .populate("workspace", "name");
+      .populate("workspace", "name title");
     res.json(bookings);
   } catch (error) {
     res.status(500).json({ message: "Server error", error: (error as Error).message });
   }
 };
 
-// @desc    বুকিংয়ের স্ট্যাটাস আপডেট করা (যেমন: pending থেকে confirmed করা)
+// @desc    বুকিংয়ের স্ট্যাটাস আপডেট করা (যেমন: pending থেকে confirmed করা)
 // @route   PUT /api/bookings/:id/status
 export const updateBookingStatus = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -60,6 +60,23 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
       booking.status = req.body.status || booking.status;
       const updatedBooking = await booking.save();
       res.json(updatedBooking);
+    } else {
+      res.status(404).json({ message: "Booking not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: (error as Error).message });
+  }
+};
+
+// @desc    বুকিং ক্যানসেল বা ডিলিট করা
+// @route   DELETE /api/bookings/:id
+export const deleteBooking = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+
+    if (booking) {
+      await booking.deleteOne();
+      res.json({ message: "Booking cancelled successfully" });
     } else {
       res.status(404).json({ message: "Booking not found" });
     }
